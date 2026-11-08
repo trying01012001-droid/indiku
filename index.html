@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#131722;color:#fff;font-family:sans-serif;margin:0;padding:10px}
+button{padding:10px 12px;border:0;border-radius:10px;background:#1E222D;color:#fff;font-weight:bold;margin:2px}
+button.on{background:#2962FF}
+.box{padding:12px;border-radius:12px;background:#1E222D;margin:8px 0;font-size:15px}
+.green{color:#26A69A}.red{color:#EF5350}
+#tv{height:500px;border-radius:12px;overflow:hidden}
+</style></head><body>
+<h2 style="margin:4px 0">INDIKU - V5 TRADINGVIEW 🔥</h2>
+<div>
+<button onclick="ganti('BINANCE:BTCUSDT',this)" class="on">BTC</button>
+<button onclick="ganti('BINANCE:ETHUSDT',this)">ETH</button>
+<button onclick="ganti('BINANCE:PAXGUSDT',this)">EMAS</button>
+<button onclick="ganti('BINANCE:SOLUSDT',this)">SOL</button>
+<button onclick="ganti('BINANCE:XRPUSDT',this)">XRP</button>
+</div>
+<div class="box" id="sinyal">Loading sinyal...</div>
+<div class="box" id="backtest">Backtest: ...</div>
+<div class="box">
+ <button onclick="shareWA()" style="background:#25D366;color:#000">📲 Kirim Sinyal ke WA</button>
+ <button onclick="copyLink()" style="background:#2962FF">🔗 Copy Link</button>
+ <span id="info"></span>
+</div>
+<div id="tv"></div>
+<p style="opacity:.6;font-size:13px">Tips: Chart ini TradingView asli, bisa zoom, geser, gambar trendline, ganti ke 1m/5m/15m/1H/4H/1D.</p>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script>
+let sym='BINANCE:BTCUSDT', bin='BTCUSDT', lastInfo='';
+function ganti(s,btn){ sym=s; bin=s.split(':')[1].replace('USDT','')+'USDT'; document.querySelectorAll('button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); buatChart(); loadSinyal(); }
+function buatChart(){
+ document.getElementById('tv').innerHTML='';
+ new TradingView.widget({"autosize":true,"symbol":sym,"interval":"60","timezone":"Asia/Jakarta","theme":"dark","style":"1","locale":"id","toolbar_bg":"#131722","enable_publishing":false,"hide_top_toolbar":false,"hide_side_toolbar":false,"allow_symbol_change":true,"container_id":"tv","studies":["MAExp@tv-basicstudies","RSI@tv-basicstudies","MACD@tv-basicstudies"]});
+}
+function copyLink(){navigator.clipboard.writeText(location.href);document.getElementById('info').innerText=' Link ke-copy!';}
+function shareWA(){let t=encodeURIComponent('🔥 SINYAL\n'+lastInfo+'\nCek: '+location.href); window.open('https://wa.me/?text='+t,'_blank');}
+async function loadSinyal(){
+ try{
+ let res=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${bin}&interval=1h&limit=200`);
+ let raw=await res.json(); let d=raw.map(c=>({close:+c[4]}));
+ let ma20=d.slice(-20).reduce((a,b)=>a+b.close,0)/20;
+ let last=d[d.length-1].close;
+ let g=0,l=0; for(let i=d.length-14;i<d.length;i++){let diff=d[i].close-d[i-1].close; if(diff>0)g+=diff; else l+=-diff;}
+ let rsi=100-(100/(1+((g/14)/((l/14)||1))));
+ let skor=50; if(last>ma20)skor+=20; if(rsi<30)skor+=15; if(rsi>30&&rsi<70)skor+=10; if(rsi>70)skor-=10;
+ let sinyal=skor>=70?'BUY KUAT 🔥':skor>=60?'BUY':skor<=40?'SELL / WAIT':'HOLD';
+ lastInfo=`${bin} | $${last.toFixed(2)} | Skor ${skor}/100 | ${sinyal} | RSI ${rsi.toFixed(0)}`;
+ document.getElementById('sinyal').innerHTML=`${bin} | <b>$${last.toFixed(2)}</b> | Skor <b>${skor}/100</b> | Sinyal: <span class="${skor>=60?'green':'red'}">${sinyal}</span> | RSI ${rsi.toFixed(0)} | MA20 ${ma20.toFixed(2)}`;
+ let cash=1000,pos=0,tr=0,win=0; for(let i=20;i<d.length;i++){let m=d.slice(i-20,i).reduce((a,b)=>a+b.close,0)/20; if(d[i].close>m&&pos==0){pos=cash/d[i].close;cash=0;tr++;} else if(d[i].close<m&&pos>0){let s=pos*d[i].close; if(s>1000)win++; cash=s;pos=0;}}
+ let akhir=cash+pos*d[d.length-1].close;
+ document.getElementById('backtest').innerHTML=`📊 BACKTEST 1H: $1000 -> <b>$${akhir.toFixed(0)}</b> (${((akhir-1000)/10).toFixed(1)}%) | Trade ${tr}x | Win ${tr?Math.round(win/tr*100):0}%`;
+ }catch(e){ document.getElementById('sinyal').innerText='Gagal ambil sinyal, refresh lagi bro'; }
+}
+buatChart(); loadSinyal(); setInterval(loadSinyal,60000);
+</script></body></html>
